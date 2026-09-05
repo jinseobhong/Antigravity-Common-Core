@@ -4,12 +4,16 @@
 
 ---
 
-## 1. 현재 상황 강제 점검 및 나침반 명시 (Mandatory State Grounding)
+## 1. 현재 상황 강제 점검 및 인수 계약 도출 (Mandatory State Grounding & Contract Extraction)
 * 어떠한 작업을 시작하든, 실제 행동(파일 생성/수정/명령어 실행 등)에 착수하기 전에 **반드시 `current-state-tracker` 스킬을 최우선 실행**하여 대상 작업 공간(기본: 프로덕션 워크스페이스 `.`) 물리 상태와 최신 상황표(`STATE.md`)를 인도받으십시오.
-* 인도받은 사실(Fact)에 기반하여 다음 의무 블록을 선언한 후에만 작업에 착수할 수 있습니다:
+* **지시사항 인텐트 분류 게이트웨이 (Directive Intent Gateway)**:
+  * 사용자 발화 인입 시 선제적으로 `classify_intent.py`를 실행하여 4대 대분류(`GENERAL_CHAT`, `TECH_DISCUSSION`, `CONTROL_FLOW`, `REQUIREMENT`)를 판별합니다.
+  * 오직 **`[REQUIREMENT]`**로 분류된 발화만 `STATE.md`에 정식 `D-xx` 지시사항으로 등록하고 인수 계약을 체결하며, 단순 질의(`TECH_DISCUSSION`)나 일상 대화(`GENERAL_CHAT`)는 상태표를 오염시키지 않습니다.
+* 신규 요구사항 인입 시 **반드시 `requirements-extractor` 스킬**(`extract_contract.py`)을 실행하여 EARS 및 RFC 2119 기준의 4대 기둥(기능, 인터페이스, NFR, 적대적 거부 조건) 인수 계약을 명시하십시오.
+* 인도받은 사실(Fact) 및 도출된 인수 계약에 기반하여 다음 의무 블록을 선언한 후에만 작업에 착수할 수 있습니다:
   > **`[마지막 완료 작업 확인]: <직전 단계에서 완료된 구체적 액션 및 산출물>`**  
   > **`[현재 상황 확인]: <인도받은 물리 파일 및 작업 진행 현황 요약>`**  
-  > **`[현재 작업 목표]: <수행할 구체적인 단일 작업 요약 및 다음 예정 단계>`**
+  > **`[현재 작업 목표 및 인수 계약]: <수행할 구체적인 단일 작업 및 REQ-01~REQ-04 수락 기준>`**
 
 ---
 
@@ -40,7 +44,7 @@
       {
         "TypeName": "adversarial-gatekeeper",
         "Role": "Adversarial Red Team Lead",
-        "Prompt": "Perform a strict adversarial red-team audit on the target environment (default: workspace root . or ./sandbox/ if in staging). Inspect STATE.md (User Directives D-01~D-08), run universal scanner (universal_audit_runner.py), probe edge cases, check hooks contract (hooks.json), and issue your definitive score and PASS or HOLD verdict.",
+        "Prompt": "Perform a strict adversarial red-team audit on the target environment (default: workspace root . or ./sandbox/ if in staging). Inspect STATE.md (User Directives D-01~D-10), run universal scanner (universal_audit_runner.py), probe edge cases, check hooks contract (hooks.json), and issue your definitive score and PASS or HOLD verdict.",
         "Model": "inherit"
       }
     ]

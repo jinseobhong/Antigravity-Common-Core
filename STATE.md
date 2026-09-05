@@ -5,21 +5,23 @@
 ---
 
 ## 🧭 작업 나침반 (Breadcrumbs)
-- **📍 마지막 완료 작업 (Last Action)**: [W-19~W-20] 프로덕션 환경 표준화 적대적 감시자 100점 통과 (✅ PASS) 및 검증 완료 ([VERIFIED])
-- **🎯 현재 활성 목표 (Active Target)**: 사용자(User)에게 최종 프로덕션 표준 Diff 검토 보고서 제출 및 승격 승인 요청
-- **⏭️ 직후 예정 단계 (Next Step)**: 사용자 최종 승인 확인
+- **📍 마지막 완료 작업 (Last Action)**: [W-28] adversarial-gatekeeper 적대적 전수 재감사 100/100점 PASS 획득 ([IN_PROGRESS] ➔ [VERIFIED])
+- **🎯 현재 활성 목표 (Active Target)**: [D-10 완료] 사용자에게 최종 결과 보고 및 프로덕션 반영 검토 요청
+- **⏭️ 직후 예정 단계 (Next Step)**: 사용자 승인 시 프로덕션 적용(패치 적용 또는 복사) 또는 추가 요구사항 대기
 
 ---
 
-## 📥 사용자 원문 지시 백로그 (User Directives)
+### 📥 사용자 원문 지시 백로그 (User Directives)
 - **D-01**: "네 샌드박스 안에서 진행해주세요." ➔ 담당 태스크: `W-01`, `W-02`, `W-03`
-- **D-02**: "단일 빌더에게 검사 권한을 주는 건 좀 좋지 않다고 생각해서 적대적 감시자를 설정하는 게 낫다고 생각합니다." ➔ 담당 태스크: `W-04`, `W-05`, `W-06`, `W-07`
+- **D-02**: "단일 빌더에게 검사 권한을 주는 건 좀 좋지 않다고 생각해서 적대적 감시자를 설정하는 게 낮다고 생각합니다." ➔ 담당 태스크: `W-04`, `W-05`, `W-06`, `W-07`
 - **D-03**: "호출 방식이 안 적혀 있는 데 어떻게 병렬 실행을 한겁니까? -> 네 박아주세요." ➔ 담당 태스크: `W-08`, `W-09`
 - **D-04**: "지금도 작동해야되지 않나요? 이건 코드에 대해서만 작동하게 된 하드코딩된건데?................음.....뭐가문제일까요?" ➔ 담당 태스크: `W-10`, `W-11`, `W-12`, `W-13`
 - **D-05**: "hooks.json으로 강제는 못해요? 지금 어디까지나 님이 메인 스트림에서 실행하는 과정인건데, 강제로 이 걸 실행하게 물리적으로 강제하는 방법은 없습니까?" ➔ 담당 태스크: `W-14`, `W-15`
 - **D-06**: "실제로 돌아가는 지 확인해야되니까 샌드박스 내라는 걸 가정하지 말고 실제 프러덕션 환경이라고 가정하고 짜보세요." ➔ 담당 태스크: `W-16`
 - **D-07**: "diff를 확인하고 적용해야하니 프러덕션 환경으로 가정하고 작성을 하더라도, /sandbox 내에서만 작성해라. 쓰기권한을 .agents/와 GEMNI.md는 막아두었다." ➔ 담당 태스크: `W-17`, `W-18`
 - **D-08**: "개발환경(샌드박스)에서 개발하는 건 프로덕션 환경이라고 명백하게 들어가야되는 데 지금 그냥 샌드박스라고 다 박아버리니까 이걸 바로 프로덕션 환경에 적용할 수가 없음." ➔ 담당 태스크: `W-19`, `W-20`
+- **D-09**: "초안 한 번 짜줄래? 최고 수준의 엔터프라이즈 기준으로 요구사항을 검출해내는 것으로. -> 승인 및 구현" ➔ 담당 태스크: `W-21`, `W-22`, `W-23`, `W-24`
+- **D-10**: "저거 원문 지시를 분류하는 인텐트가 있어야될거같은데? 사용자 지시사항을 일반 / 기술 대화 / 요구 사항 / 그 외 분류 이런식으로 ? -> 승인" ➔ 담당 태스크: `W-25`, `W-26`, `W-27`, `W-28`
 
 ---
 
@@ -46,4 +48,13 @@
 | **W-18** | D-07 | 샌드박스 ➔ 프로덕션 사전 검토용 Diff 추출 도구(generate_diff.py) 구축 | `[VERIFIED]` | `sandbox/.agents/skills/current-state-tracker/scripts/generate_diff.py` | 적대적 감시자 100점 PASS 획득 |
 | **W-19** | D-08 | 프로덕션 환경(Production Environment) 표준화: GEMINI.md, README.md, SKILL.md, enforce_adversarial_gate.py 전면 개편 | `[VERIFIED]` | `sandbox/GEMINI.md`, `sandbox/README.md`, `.agents/` | 적대적 감시자 100점 PASS 획득 |
 | **W-20** | D-08 | CLI 엔트리포인트 기본값 프로덕션(.) 통일 및 다중 환경(프로덕션 vs 샌드박스) 호환성 보장 | `[VERIFIED]` | `sandbox/.agents/skills/` | 적대적 감시자 100점 PASS 획득 |
+| **W-21** | D-09 | `requirements-extractor` 스킬 스캐폴딩 및 엔터프라이즈 계약 추출기(`extract_contract.py`) 구축 | `[VERIFIED]` | `sandbox/.agents/skills/requirements-extractor/` | 적대적 재감사 100점 PASS 획득 |
+| **W-22** | D-09 | `GEMINI.md`, `README.md`, `SKILL.md` 3자 트라이어드 거버넌스 및 CLI 가이드 동기화 | `[VERIFIED]` | `sandbox/` | 적대적 재감사 100점 PASS 획득 |
+| **W-23** | D-09 | `universal_audit_runner.py`에 요구사항 계약 무결성 검증 규칙 통합 | `[VERIFIED]` | `sandbox/.agents/skills/adversarial-gatekeeper/scripts/universal_audit_runner.py` | 100점 통과 완료 |
+| **W-24** | D-09 | `adversarial-gatekeeper` 적대적 전수 재감사 및 100점 PASS 획득 | `[VERIFIED]` | `sandbox/` | 적대적 재감사 100점 PASS 통과 완료 |
+| **W-25** | D-10 | `requirements-extractor` 내 지시사항 4대 대분류 + 5대 소분류 인텐트 분류기(`classify_intent.py`) 구축 | `[VERIFIED]` | `sandbox/.agents/skills/requirements-extractor/scripts/classify_intent.py` | 적대적 감시자 100점 PASS 획득 |
+| **W-26** | D-10 | `extract_contract.py`에 인텐트 분류기 연동 (비요구사항 필터링 및 요구사항 하위유형별 EARS 템플릿 차등화) | `[VERIFIED]` | `sandbox/.agents/skills/requirements-extractor/scripts/extract_contract.py` | 적대적 감시자 100점 PASS 획득 |
+| **W-27** | D-10 | `SKILL.md`, `GEMINI.md`, `README.md` 및 가이드 문서에 인텐트 게이트웨이 프로토콜 반영 | `[VERIFIED]` | `sandbox/` | 적대적 감시자 100점 PASS 획득 |
+| **W-28** | D-10 | `adversarial-gatekeeper` 적대적 전수 재감사 및 100점 PASS 획득 | `[VERIFIED]` | `sandbox/` | 적대적 감시자 100점 PASS 통과 완료 |
+
 

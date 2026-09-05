@@ -376,10 +376,41 @@ class UniversalAuditor:
                 if file.endswith(".py") and file != "__init__.py":
                     self._test_single_cli_script(Path(root) / file)
 
+    def audit_skills_contract(self):
+        """Pillar 4: Enterprise Triad Skills Integrity & Acceptance Contract Schema"""
+        skills_dir = self.target_dir / ".agents" / "skills"
+        if not skills_dir.exists():
+            return
+
+        # Check required triad skills
+        triad_skills = {
+            "current-state-tracker": ["SKILL.md", "scripts/inspect_state.py", "scripts/generate_diff.py"],
+            "adversarial-gatekeeper": ["SKILL.md", "scripts/universal_audit_runner.py"],
+            "requirements-extractor": ["SKILL.md", "scripts/extract_contract.py", "references/ears_syntax_guide.md"]
+        }
+
+        for skill_name, required_files in triad_skills.items():
+            skill_path = skills_dir / skill_name
+            if not skill_path.exists():
+                self.add_defect("MAJOR", f".agents/skills/{skill_name}",
+                                f"Triad governance skill '{skill_name}' missing from skills directory",
+                                f"Scaffold and deploy {skill_name} skill.")
+                continue
+
+            for rf in required_files:
+                file_target = skill_path / rf
+                if not file_target.exists():
+                    self.add_defect("CRITICAL", f".agents/skills/{skill_name}/{rf}",
+                                    f"Required triad skill asset '{rf}' missing in '{skill_name}'",
+                                    f"Ensure {rf} exists and is executable.")
+
     def run_all(self) -> Dict[str, Any]:
         """Execute full universal audit suite"""
         # 1. Audit Directives
         self.audit_state_directives()
+
+        # 2. Audit Triad Skills Integrity
+        self.audit_skills_contract()
 
         # 2. Audit All Files by Domain
         for root, dirs, files in os.walk(self.target_dir):
