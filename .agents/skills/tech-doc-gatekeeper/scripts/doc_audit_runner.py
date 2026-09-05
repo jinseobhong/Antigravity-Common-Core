@@ -12,8 +12,9 @@ import os
 import re
 import json
 import argparse
+import subprocess
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 # Ensure UTF-8 output on Windows console
 if sys.platform == "win32":
@@ -120,7 +121,7 @@ def scan_markdown(file_path: Path, root_path: Path) -> List[Dict[str, Any]]:
                 findings.append({
                     "category": "EMPTY_SECTION",
                     "severity": "MEDIUM",
-                    "type": f"Empty section detected without body content",
+                    "type": "Empty section detected without body content",
                     "file": rel_path,
                     "line": previous_heading_line,
                     "evidence": f"Heading level {last_heading_level} has no body text before next heading"
@@ -172,9 +173,6 @@ def scan_markdown(file_path: Path, root_path: Path) -> List[Dict[str, Any]]:
 
     return findings
 
-
-import subprocess
-from typing import Dict, List, Any, Optional
 
 def get_git_changed_files(root_dir: Path) -> List[Path]:
     """Retrieve list of modified, staged, and newly added documentation files via Git."""

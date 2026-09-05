@@ -55,18 +55,14 @@ description: >-
 
 ## 3. 요구사항 추출 실행 절차 (Execution Pipeline)
 
-1. **지시사항 인입 분석 및 인텐트 분류 (Intent Gateway)**:
-   - 사용자 발화 인입 시, 먼저 `classify_intent.py`를 실행하여 4대 대분류 및 5대 소분류를 판별합니다:
-   ```powershell
-   python .agents/skills/requirements-extractor/scripts/classify_intent.py --text "사용자 발화 원문"
-   ```
-   - **`[GENERAL_CHAT]`**: 일상 대화 응답 생성 (상태표 미등록).
-   - **`[TECH_DISCUSSION]`**: 기술 분석 및 옵션 답변 생성 (구현 태스크 미생성).
-   - **`[CONTROL_FLOW]`**: 상태 머신 전이 처리 (승인/보류 등).
-   - **`[REQUIREMENT]`**: `STATE.md`에 공식 `D-xx`로 등록하고 2단계 계약 도출로 직행.
+1. **사전 규격 합의 제약 게이트 (Pre-Agreement Constraint Gate)**:
+   - 모호한 인텐트 추측 대신 명시적 엔지니어링 제약을 적용합니다 (Fast-Track 원천 차단).
+   - 사용자 발화 인입 시 독단적인 파일 생성/코드 수정 착수를 엄격히 금지하고, 먼저 `extract_contract.py`를 실행하여 4대 기둥 인수 규격을 도출합니다.
+   - 사용자에게 규격을 제시하고 명시적 사전 동의(`"네 진행합시다"` 등)를 획득한 후에만 구현 태스크에 착수합니다.
+   *(필요 시 하위 호환 도구인 `classify_intent.py`를 통해 지시사항 소분류를 확인할 수 있습니다.)*
 
 2. **4대 기둥 인수 계약 체결**:
-   - `[REQUIREMENT]`로 판정된 발화에 대해 `extract_contract.py`를 실행하여 소분류(`REQ:DESIGN`, `REQ:IMPLEMENT` 등)에 최적화된 EARS 인수 계약을 도출합니다:
+   - `extract_contract.py`를 실행하여 소분류(`REQ:DESIGN`, `REQ:DOC`, `REQ:AUDIT`, `REQ:GOVERNANCE`, `REQ:IMPLEMENT`)에 최적화된 EARS 인수 계약을 도출합니다:
    ```powershell
    # 모드 A: STATE.md 자동 연동 모드 (권장: 상황표에서 지시문 및 매핑 태스크 자동 추출)
    python .agents/skills/requirements-extractor/scripts/extract_contract.py --directive-id "D-10" --target-dir .

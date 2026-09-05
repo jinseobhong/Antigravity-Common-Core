@@ -186,14 +186,14 @@ def main():
     parser.add_argument("--target-dir", type=str, default=".", help="Target workspace directory to inspect (default: .)")
     parser.add_argument("--files", action="store_true", help="Display full physical file inventory list")
     parser.add_argument("--json", action="store_true", help="Output raw JSON")
-    
+
     # State update helper flags
     parser.add_argument("--update-tag", nargs=2, metavar=("TASK_ID", "NEW_TAG"), help="Update task tag in STATE.md")
     parser.add_argument("--new-action", type=str, default=None, help="Update next action column when updating tag")
     parser.add_argument("--set-action", type=str, help="Update Last Action in Breadcrumbs")
     parser.add_argument("--set-target", type=str, help="Update Active Target in Breadcrumbs")
     parser.add_argument("--set-next", type=str, help="Update Next Step in Breadcrumbs")
-    
+
     args = parser.parse_args()
     target_path = Path(args.target_dir)
     state_file = target_path / "STATE.md"

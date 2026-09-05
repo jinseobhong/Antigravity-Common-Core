@@ -5,9 +5,9 @@
 ---
 
 ## 🧭 작업 나침반 (Breadcrumbs)
-- **📍 마지막 완료 작업 (Last Action)**: [W-28] adversarial-gatekeeper 적대적 전수 재감사 100/100점 PASS 획득 ([IN_PROGRESS] ➔ [VERIFIED])
-- **🎯 현재 활성 목표 (Active Target)**: [D-10 완료] 사용자에게 최종 결과 보고 및 프로덕션 반영 검토 요청
-- **⏭️ 직후 예정 단계 (Next Step)**: 사용자 승인 시 프로덕션 적용(패치 적용 또는 복사) 또는 추가 요구사항 대기
+- **📍 마지막 완료 작업 (Last Action)**: [W-36] 거버넌스 문서 동기화 및 `adversarial-gatekeeper` 독립 감시자 적대적 전수 재감사 100점 만점 PASS 통과 (W-33~W-36 [VERIFIED] 승격)
+- **🎯 현재 활성 목표 (Active Target)**: 사용자(User)에게 통합 Diff 리포트 보고 및 최종 승격(Promotion) 승인 요청
+- **⏭️ 직후 예정 단계 (Next Step)**: 사용자의 승인 시 프로덕션 루트(`.`)로 샌드박스 산출물 승격(Promotion)
 
 ---
 
@@ -22,6 +22,8 @@
 - **D-08**: "개발환경(샌드박스)에서 개발하는 건 프로덕션 환경이라고 명백하게 들어가야되는 데 지금 그냥 샌드박스라고 다 박아버리니까 이걸 바로 프로덕션 환경에 적용할 수가 없음." ➔ 담당 태스크: `W-19`, `W-20`
 - **D-09**: "초안 한 번 짜줄래? 최고 수준의 엔터프라이즈 기준으로 요구사항을 검출해내는 것으로. -> 승인 및 구현" ➔ 담당 태스크: `W-21`, `W-22`, `W-23`, `W-24`
 - **D-10**: "저거 원문 지시를 분류하는 인텐트가 있어야될거같은데? 사용자 지시사항을 일반 / 기술 대화 / 요구 사항 / 그 외 분류 이런식으로 ? -> 승인" ➔ 담당 태스크: `W-25`, `W-26`, `W-27`, `W-28`
+- **D-11**: "업그레이드하자. 그리고 모든 skills의 스크립트 파일을 한 번 더 검토하는 것이 필요할 것 같아." ➔ 담당 태스크: `W-29`, `W-30`, `W-31`, `W-32`
+- **D-12**: "음. 지금 클래시피컬하게 분류가 되는 데, 너무 불명확하게 한 거 같은데, 좀 제약사항인걸로 바꾸면 간단하지 않을까 싶은데? 제가 하고 싶은 건 각 기능들을 구현할 때 규격을 정하고 그 규격대로 되는 건데, 의도를 판별할 필요가 없잖아요? 다만 구현 이전에 사전 동의를 명시화하면 될 것 같은데? 어떻게 생각하세요. 지금 문제가 바로바로 fast track이 되는건데. -> 네 단순화합시다." ➔ 담당 태스크: `W-33`, `W-34`, `W-35`, `W-36`
 
 ---
 
@@ -56,5 +58,13 @@
 | **W-26** | D-10 | `extract_contract.py`에 인텐트 분류기 연동 (비요구사항 필터링 및 요구사항 하위유형별 EARS 템플릿 차등화) | `[VERIFIED]` | `sandbox/.agents/skills/requirements-extractor/scripts/extract_contract.py` | 적대적 감시자 100점 PASS 획득 |
 | **W-27** | D-10 | `SKILL.md`, `GEMINI.md`, `README.md` 및 가이드 문서에 인텐트 게이트웨이 프로토콜 반영 | `[VERIFIED]` | `sandbox/` | 적대적 감시자 100점 PASS 획득 |
 | **W-28** | D-10 | `adversarial-gatekeeper` 적대적 전수 재감사 및 100점 PASS 획득 | `[VERIFIED]` | `sandbox/` | 적대적 감시자 100점 PASS 통과 완료 |
+| **W-29** | D-11 | 스킬 스크립트 8종 전수 검토 및 엣지 케이스 시정 (`classify_intent.py`, `extract_contract.py`, `enforce_adversarial_gate.py`) | `[VERIFIED]` | `sandbox/.agents/skills/` | 적대적 감시자 100점 PASS 획득 |
+| **W-30** | D-11 | 3계층 검증 엔진 구축: `universal_audit_runner.py`에 `flake8`, AST `LazyStubDetector`, 동적 테스트 러너 통합 | `[VERIFIED]` | `sandbox/.agents/skills/adversarial-gatekeeper/scripts/universal_audit_runner.py` | 적대적 감시자 100점 PASS 획득 |
+| **W-31** | D-11 | 동반 테스트 스위트(`sandbox/tests/test_skills_runtime.py`) 구축 및 런타임 무결성 실증 | `[VERIFIED]` | `sandbox/tests/test_skills_runtime.py` | 적대적 감시자 100점 PASS 획득 |
+| **W-32** | D-11 | `GEMINI.md`, `README.md`, `SKILL.md` 거버넌스 문서 동기화 및 `adversarial-gatekeeper` 적대적 전수 재감사 | `[VERIFIED]` | `sandbox/` | 1차 50점 HOLD 수령 ➔ PUNCH-01 시정 ➔ 2차 100점 PASS 획득 |
+| **W-33** | D-12 | `extract_contract.py` 자체 완결형 경량화 및 외부 의존성 제거 (`classify_text` 내장) | `[VERIFIED]` | `sandbox/.agents/skills/requirements-extractor/scripts/extract_contract.py` | 적대적 감시자 100점 PASS 획득 |
+| **W-34** | D-12 | 사전 규격 합의 제약 게이트(Pre-Agreement Constraint Gate) 확립 및 `classify_intent.py` 래퍼화 | `[VERIFIED]` | `sandbox/GEMINI.md`, `classify_intent.py`, `SKILL.md` | 적대적 감시자 100점 PASS 획득 |
+| **W-35** | D-12 | 동반 단위 테스트(`sandbox/tests/test_skills_runtime.py`) 갱신 및 3계층 무결성 실증 (10/10 PASS) | `[VERIFIED]` | `sandbox/tests/test_skills_runtime.py` | 적대적 감시자 100점 PASS 획득 |
+| **W-36** | D-12 | 거버넌스 문서(`README.md`) 동기화 및 `adversarial-gatekeeper` 적대적 전수 재감사 | `[VERIFIED]` | `sandbox/` | 적대적 감시자 100점 PASS 획득 |
 
 

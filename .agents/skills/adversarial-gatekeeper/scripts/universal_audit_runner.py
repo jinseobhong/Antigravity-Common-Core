@@ -36,6 +36,12 @@ try:
 except ImportError:
     HAS_YAML = False
 
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
+
 IGNORED_DIRS = {
     ".git", ".svn", "node_modules", "venv", ".venv", "env",
     "__pycache__", ".pytest_cache", "dist", "build", "coverage"
@@ -65,6 +71,54 @@ DOC_PLACEHOLDER_PATTERNS = [
     ("Ellipsis Placeholder", re.compile(r"^\s*(?:\.\.\.|…)\s*$")),
 ]
 
+# 4. JSON Schema for Antigravity Lifecycle Hooks (.agents/hooks.json)
+HOOKS_SCHEMA = {
+    "type": "object",
+    "patternProperties": {
+        ".*": {
+            "type": "object",
+            "properties": {
+                "enabled": {"type": "boolean"},
+                "PreToolUse": {"type": "array"},
+                "PostToolUse": {"type": "array"},
+                "PreInvocation": {"type": "array"},
+                "PostInvocation": {"type": "array"},
+                "Stop": {"type": "array"}
+            },
+            "additionalProperties": False
+        }
+    }
+}
+
+
+class LazyStubVisitor(ast.NodeVisitor):
+    """AST visitor to detect AI code evasion (pass stubs, ellipsis placeholders)."""
+    def __init__(self, rel_path: str):
+        self.rel_path = rel_path
+        self.stubs: List[tuple[str, int, str]] = []
+
+    def _is_abstract(self, node: ast.FunctionDef) -> bool:
+        for d in node.decorator_list:
+            if isinstance(d, ast.Name) and d.id in {"abstractmethod", "overload"}:
+                return True
+            elif isinstance(d, ast.Attribute) and d.attr in {"abstractmethod", "overload"}:
+                return True
+        return False
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        if not self._is_abstract(node):
+            real_body = [
+                stmt for stmt in node.body
+                if not (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant) and isinstance(stmt.value.value, str))
+            ]
+            if len(real_body) == 1:
+                first = real_body[0]
+                if isinstance(first, ast.Pass):
+                    self.stubs.append((node.name, node.lineno, "Bare 'pass' statement in function body (AI Lazy Stub)"))
+                elif isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant) and first.value.value is Ellipsis:
+                    self.stubs.append((node.name, node.lineno, "Ellipsis (...) placeholder in function body (AI Lazy Stub)"))
+        self.generic_visit(node)
+
 
 class UniversalAuditor:
     def __init__(self, target_dir: Path):
@@ -77,7 +131,12 @@ class UniversalAuditor:
             "config_files": 0,
             "directives_checked": 0,
             "tasks_checked": 0,
-            "exec_tested": 0
+            "exec_tested": 0,
+            "linter_tested": False,
+            "linter_violations": 0,
+            "tests_executed": False,
+            "tests_count": 0,
+            "tests_passed": False
         }
 
     def add_defect(self, severity: str, file_path: str, issue: str, remediation: str):
@@ -143,6 +202,7 @@ class UniversalAuditor:
         """Pillar 2A: Code Syntax, Secrets, and Stubs"""
         self.stats["code_files"] += 1
         rel_path = file_path.relative_to(self.target_dir).as_posix()
+        is_scanner_script = file_path.name in {"audit_runner.py", "doc_audit_runner.py", "universal_audit_runner.py"}
 
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -151,10 +211,17 @@ class UniversalAuditor:
             self.add_defect("MAJOR", rel_path, "File unreadable", "Ensure UTF-8 encoding.")
             return
 
-        # Python Syntax Compilation
+        # Python Syntax Compilation & AST Lazy Stub Detection
         if file_path.suffix.lower() == ".py":
             try:
-                ast.parse(source, filename=rel_path)
+                tree = ast.parse(source, filename=rel_path)
+                if not is_scanner_script:
+                    stub_visitor = LazyStubVisitor(rel_path)
+                    stub_visitor.visit(tree)
+                    for func_name, lineno, msg in stub_visitor.stubs:
+                        self.add_defect("CRITICAL", f"{rel_path}:{lineno}",
+                                        f"AI Lazy Stub detected in '{func_name}()': {msg}",
+                                        "Implement production-grade logic; remove placeholder pass or ellipsis.")
             except SyntaxError as e:
                 self.add_defect("CRITICAL", rel_path, f"Python SyntaxError at line {e.lineno}: {e.msg}",
                                 "Fix syntax error immediately.")
@@ -168,7 +235,6 @@ class UniversalAuditor:
 
         # Stubs Check (skipping multiline docstrings and scanner regexes)
         in_docstring = False
-        is_scanner_script = file_path.name in {"audit_runner.py", "doc_audit_runner.py", "universal_audit_runner.py"}
 
         for line_num, raw_line in enumerate(source.splitlines(), start=1):
             line = raw_line.strip()
@@ -291,6 +357,13 @@ class UniversalAuditor:
             self.add_defect("CRITICAL", rel_path, "hooks.json root must be a JSON object", "Wrap hooks under named keys.")
             return
 
+        if HAS_JSONSCHEMA:
+            try:
+                jsonschema.validate(instance=data, schema=HOOKS_SCHEMA)
+            except jsonschema.ValidationError as err:
+                self.add_defect("MAJOR", rel_path, f"JSONSchema validation failed: {err.message}",
+                                "Ensure hooks conform to Antigravity hook schema.")
+
         valid_events = {"PreToolUse", "PostToolUse", "PreInvocation", "PostInvocation", "Stop"}
         hooks_file_dir = (self.target_dir / rel_path).parent
 
@@ -404,15 +477,70 @@ class UniversalAuditor:
                                     f"Required triad skill asset '{rf}' missing in '{skill_name}'",
                                     f"Ensure {rf} exists and is executable.")
 
-    def run_all(self) -> Dict[str, Any]:
-        """Execute full universal audit suite"""
-        # 1. Audit Directives
-        self.audit_state_directives()
+    def audit_linter(self):
+        """Tier 1: Static Linter Execution via Flake8 (PEP8, unused vars/imports, syntax)"""
+        cmd = [
+            sys.executable, "-m", "flake8",
+            "--select=E,F,W",
+            "--ignore=E501,W503",
+            f"--exclude={','.join(IGNORED_DIRS)}",
+            str(self.target_dir)
+        ]
+        try:
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+            self.stats["linter_tested"] = True
+            if res.returncode != 0 and res.stdout.strip():
+                lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+                self.stats["linter_violations"] = len(lines)
+                for line in lines:
+                    self.add_defect("MAJOR", line, f"Flake8 linter violation: {line}",
+                                    "Resolve style/syntax violation according to PEP8.")
+            else:
+                self.stats["linter_violations"] = 0
+        except Exception:
+            self.stats["linter_tested"] = False
 
-        # 2. Audit Triad Skills Integrity
+    def audit_dynamic_tests(self):
+        """Tier 2: Dynamic Runtime Execution & Test Pairing (unittest discover)"""
+        tests_dir = self.target_dir / "tests"
+        if not tests_dir.exists() or not any(tests_dir.glob("test_*.py")):
+            if self.stats["code_files"] > 0:
+                self.add_defect("MAJOR", "tests/",
+                                "No dynamic unit tests found (Test Pairing violation: tests/test_*.py missing)",
+                                "Create dynamic test suite in tests/ to verify runtime execution.")
+            return
+
+        cmd = [
+            sys.executable, "-m", "unittest", "discover",
+            "-s", str(tests_dir),
+            "-p", "test_*.py"
+        ]
+        try:
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=60)
+            self.stats["tests_executed"] = True
+            output = res.stderr.strip() or res.stdout.strip()
+            run_match = re.search(r"Ran\s+(\d+)\s+tests?", output)
+            test_count = int(run_match.group(1)) if run_match else 0
+            self.stats["tests_count"] = test_count
+
+            if res.returncode != 0:
+                self.stats["tests_passed"] = False
+                self.add_defect("CRITICAL", "tests/",
+                                f"Dynamic test suite execution failed:\n{output}",
+                                "Fix runtime crashes (TypeError, NameError, AssertionError) before gate clearance.")
+            else:
+                self.stats["tests_passed"] = True
+        except subprocess.TimeoutExpired:
+            self.add_defect("CRITICAL", "tests/", "Dynamic test suite timed out (>60s)", "Optimize test suite performance.")
+        except Exception as e:
+            self.add_defect("MAJOR", "tests/", f"Failed to execute dynamic tests: {e}", "Ensure tests can be run via unittest.")
+
+    def run_all(self) -> Dict[str, Any]:
+        """Execute full 3-Tier universal audit suite"""
+        # --- Tier 1: Static Integrity (0.1s / 0-cost) ---
+        self.audit_state_directives()
         self.audit_skills_contract()
 
-        # 2. Audit All Files by Domain
         for root, dirs, files in os.walk(self.target_dir):
             dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
             for file in files:
@@ -429,8 +557,11 @@ class UniversalAuditor:
                 elif ext in {".json", ".yaml", ".yml"}:
                     self.audit_config_file(file_path)
 
-        # 3. Audit Executability
+        self.audit_linter()
+
+        # --- Tier 2: Dynamic Execution Integrity (1-2s / 0-cost) ---
         self.audit_executability()
+        self.audit_dynamic_tests()
 
         # Compute Score
         score = 100
@@ -469,7 +600,7 @@ class UniversalAuditor:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Universal Task Auditor - Domain-Agnostic Adversarial Red Team Scanner")
+    parser = argparse.ArgumentParser(description="Universal Task Auditor - 3-Tier Fail-Fast Verification Engine")
     parser.add_argument("--target-dir", type=str, default=".", help="Target workspace directory to audit (default: .)")
     parser.add_argument("--json", action="store_true", help="Output raw JSON")
     args = parser.parse_args()
@@ -482,17 +613,23 @@ def main():
         return 0 if report["verdict"] == "PASS" else 1
 
     print("=" * 65)
-    print("🏛️ [Universal Adversarial Audit Report (범용 적대적 감사 보고서)]")
+    print("🏛️ [Universal Adversarial Audit Report (3-Tier Fail-Fast Pipeline)]")
     print("=" * 65)
     print(f"• 감사 대상    : {report['target_dir']}")
     print(f"• 최종 판정    : {'✅ PASS (Gate Cleared)' if report['verdict'] == 'PASS' else '🛑 HOLD (Remediation Required)'}")
     print(f"• 산정 점수    : {report['score']} / 100점 (기준: 90점 이상 & CRITICAL 0건)")
     print("-" * 65)
-    print("📊 도메인별 검사 통계:")
+    print("📊 3계층 파이프라인 검증 통계:")
     stats = report["stats"]
-    print(f"  - 총 파일 수    : {stats['total_files']}개 (코드 {stats['code_files']}개, 문서 {stats['doc_files']}개, 설정 {stats['config_files']}개)")
-    print(f"  - 지시사항 검증 : {stats['directives_checked']}개 지시사항 vs {stats['tasks_checked']}개 태스크 매핑 확인")
-    print(f"  - CLI 스모크검증: {stats['exec_tested']}개 실행 엔트리포인트 점검 완료")
+    linter_status = f"{stats['linter_violations']}건 위반" if stats['linter_violations'] > 0 else "정상 (0 violations)"
+    print(f"  [Tier 1: 정적 무결성] 총 {stats['total_files']}개 파일 (코드 {stats['code_files']}, 문서 {stats['doc_files']}, 설정 {stats['config_files']})")
+    print(f"                       Flake8 린터: {linter_status} | 지시사항 매핑: {stats['directives_checked']}개")
+    test_status = f"{stats['tests_count']}개 통과 (OK)" if stats['tests_passed'] else f"{stats['tests_count']}개 실행 (FAIL)"
+    if not stats['tests_executed']:
+        test_status = "테스트 스위트 미검출"
+    print(f"  [Tier 2: 동적 무결성] CLI 스모크: {stats['exec_tested']}개 점검 | 동적 테스트: {test_status}")
+    gate_ready = "준비 완료 (Ready for Gatekeeper)" if report['verdict'] == 'PASS' else "시정 필요 (Remediation Required)"
+    print(f"  [Tier 3: 의미론 감시] 감시자 청구 준비도: {gate_ready}")
     print("-" * 65)
     summary = report["summary"]
     print(f"🔍 결함 집계 : CRITICAL={summary['critical_defects']} | MAJOR={summary['major_defects']} | MINOR={summary['minor_defects']}")

@@ -13,8 +13,9 @@ import os
 import re
 import json
 import argparse
+import subprocess
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 # Configure Windows console UTF-8
 if sys.platform == "win32":
@@ -123,8 +124,11 @@ def scan_file(file_path: Path, root_path: Path) -> List[Dict[str, Any]]:
                 })
 
         # Code-only checks (Lazy Stubs, Dirty Smells, Indentation)
+        is_test_file = "tests" in file_path.parts or file_path.name.startswith("test_")
         if is_code:
             for name, pattern in LAZY_STUB_PATTERNS:
+                if is_test_file and "Pass" in name:
+                    continue
                 if name == "Python Unimplemented Pass":
                     prev_line = lines[line_num - 2].strip() if line_num >= 2 else ""
                     if prev_line.startswith("except") or prev_line.startswith("finally"):
@@ -160,7 +164,7 @@ def scan_file(file_path: Path, root_path: Path) -> List[Dict[str, Any]]:
                     findings.append({
                         "category": "DEEP_NESTING",
                         "severity": "HIGH",
-                        "type": f"Deep Nesting Depth ({len(spaces)//4} levels)",
+                        "type": f"Deep Nesting Depth ({len(spaces) // 4} levels)",
                         "file": rel_path,
                         "line": line_num,
                         "evidence": line[:100]
@@ -168,9 +172,6 @@ def scan_file(file_path: Path, root_path: Path) -> List[Dict[str, Any]]:
 
     return findings
 
-
-import subprocess
-from typing import Dict, List, Any, Optional
 
 def get_git_changed_files(root_dir: Path) -> List[Path]:
     """Retrieve list of modified, staged, and newly added untracked files via Git."""

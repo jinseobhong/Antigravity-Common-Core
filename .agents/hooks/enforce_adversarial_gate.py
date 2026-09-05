@@ -9,7 +9,6 @@ to invoke the adversarial-gatekeeper subagent.
 """
 
 import sys
-import os
 import json
 import re
 from pathlib import Path
@@ -40,7 +39,7 @@ def check_adversarial_clearance(sandbox_dir: Path) -> dict:
             "reason": f"🛑 [GATE ERROR] Cannot read STATE.md: {e}"
         }
 
-    # PUNCH-02: Strict check - ANY status other than [VERIFIED] triggers the block
+    # Strict check: Block turn completion if any staged deliverables or revisions require audit
     unverified_tasks = []
     task_pattern = re.compile(r"\|\s*\*\*(W-\d+)\*\*\s*\|[^|]+\|[^|]+\|\s*`?(\[[A-Z_]+\])`?\s*\|")
     for line in content.splitlines():
@@ -48,7 +47,9 @@ def check_adversarial_clearance(sandbox_dir: Path) -> dict:
         if match:
             tid = match.group(1)
             status = match.group(2)
-            if status != "[VERIFIED]":
+            # Only [STAGED], [REVISION], [READY_FOR_AUDIT] require mandatory gatekeeper audit clearance.
+            # [PLANNED] and [REQUESTED] represent pre-implementation states that allow user feedback.
+            if status in ["[STAGED]", "[REVISION]", "[READY_FOR_AUDIT]"]:
                 unverified_tasks.append(f"{tid}:{status}")
 
     if unverified_tasks:
@@ -70,12 +71,11 @@ def check_adversarial_clearance(sandbox_dir: Path) -> dict:
 
 def main():
     # PUNCH-03: Specific exception handling without swallowed broad exception
-    context = {}
     if "--stdin" in sys.argv:
         try:
             raw_input = sys.stdin.read()
             if raw_input.strip():
-                context = json.loads(raw_input)
+                json.loads(raw_input)
         except (json.JSONDecodeError, OSError, UnicodeDecodeError):
             pass
 

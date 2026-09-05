@@ -22,25 +22,26 @@ description: >-
 
 ---
 
-## 2. 4단계 감사 실행 파이프라인 (Audit Execution Pipeline)
+## 2. 3계층 Fail-Fast 감사 실행 파이프라인 (3-Tier Audit Pipeline)
 
-감시자 서브에이전트는 호출 즉시 다음 4단계를 순차 실행합니다:
+감시자 서브에이전트는 호출 즉시 다음 3계층 파이프라인을 순차 실행합니다:
 
 ```text
-[1단계: 범용 기계적 무결성 스캔 (Universal Task Audit)]
-  • python .agents/skills/adversarial-gatekeeper/scripts/universal_audit_runner.py --target-dir .
-  (※ 스테이징 샌드박스 개발 시: --target-dir ./sandbox 지정)
-  ➔ 코드(구문/시크릿/스텁), 문서(계층/펜스/플레이스홀더), 설정(JSON/YAML), 지시사항 대조, CLI 스모크 전수 검증
-  ➔ 종합 점수 90점 미달 또는 CRITICAL 결함 1건이라도 발견 시 즉시 '1차 HOLD'
+[1단계: Tier 1 - 기계적 정적 무결성 스캔 (Static Integrity - 0.1초)]
+  • 기성 린터: flake8 --select=E,F,W --ignore=E501,W503 (PEP8 및 미사용 식별자 차단)
+  • AST LazyStubDetector: pass, ..., 단일 더미 리턴 등 AI 태업 스텁 색출
+  • 설정 스키마 및 문서 헤딩/펜스 무결성 검증 (jsonschema)
+  ➔ 위반 시 즉시 1차 HOLD
 
-[2단계: 요구사항 적합성 대조 (Spec Compliance)]
-  • STATE.md의 'User Directives' 원문과 대상 작업 공간 산출물 전수 대조
-  • 지시사항 중 은근슬쩍 누락되거나 축소 구현된 항목 색출 (누락 시 '2차 HOLD')
+[2단계: Tier 2 - 동적 런타임 무결성 & 테스트 페어링 (Dynamic Execution - 1~2초)]
+  • 테스트 페어링 검증: 모든 기능 코드에 동반된 tests/test_*.py 존재 여부 확인
+  • 동적 테스트 실행: python -m unittest discover -s tests -p "test_*.py"
+  • TypeError, NoneType, IndexError 등 런타임 크래시 발생 시 즉시 2차 HOLD
 
-[3단계: 가혹한 엣지 케이스 침투 (Stress & Boundary Attack)]
-  • Null / None / 빈 문자열 / 경계값 / 비정상 페이로드 입력 시 크래시 여부
-  • 설정 스키마 및 라이프사이클 훅(hooks.json) 계약 무결성 검증
-  • 예외 처리가 광범위한 침묵(pass)으로 뭉개졌는지 검사
+[3단계: Tier 3 - 의미론적 의도 및 엣지 케이스 침투 (Semantic Red-Team Audit)]
+  • STATE.md의 'User Directives' 원문 및 인수 계약(REQ-01~04) 대조
+  • 지시사항 누락/축소 구현 색출, 경계값/논리 반전, 부작용 및 격리 영역 위반 공격
+  • 라이프사이클 훅(hooks.json) 계약 무결성 실증
 
 [4단계: 최종 판정 및 결함 시정 요구서(Punch List) 발부]
   • 결함 발견 시: '🛑 HOLD' 선언 + 수정 조치 항목(Punch List) 명시

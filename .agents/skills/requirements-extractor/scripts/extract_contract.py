@@ -6,13 +6,12 @@ Integrates directly with STATE.md to bind acceptance criteria to development tas
 """
 
 import sys
-import os
 import re
 import json
 import argparse
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 # Windows console UTF-8 support
 if sys.platform == "win32":
@@ -23,15 +22,28 @@ if sys.platform == "win32":
         pass
 
 
-# Import Intent Classifier
-try:
-    from .classify_intent import classify_text
-except (ImportError, ValueError):
-    try:
-        from classify_intent import classify_text
-    except ImportError:
-        sys.path.insert(0, str(Path(__file__).parent))
-        from classify_intent import classify_text
+def classify_text(text: str) -> Dict[str, Any]:
+    """Lightweight specification helper for sub-intent categorization."""
+    clean = text.strip()
+    if any(k in clean for k in ["문서", "가이드", "doc", "README", "규격서"]):
+        sub = "REQ:DOC"
+    elif any(k in clean for k in ["초안", "설계", "구조", "draft", "design"]):
+        sub = "REQ:DESIGN"
+    elif any(k in clean for k in ["감사", "검수", "테스트", "audit", "verify"]):
+        sub = "REQ:AUDIT"
+    elif any(k in clean for k in ["거버넌스", "권한", "격리", "policy", "hook", "규약"]):
+        sub = "REQ:GOVERNANCE"
+    else:
+        sub = "REQ:IMPLEMENT"
+    return {
+        "text": clean,
+        "primary_intent": "REQUIREMENT",
+        "sub_intent": sub,
+        "is_actionable": True
+    }
+
+
+classify_intent = classify_text
 
 
 def resolve_directive_from_state(directive_id: str, target_dir: Path) -> tuple[str | None, str | None]:
@@ -90,9 +102,9 @@ def decompose_directive(directive_id: str, directive_text: str, task_id: str = "
         p1_pass = "Zero root mutations, active Stop hook enforcement, and verified gate status"
         p1_hold = "Bypassed quality gate, unauthorized root modifications, or absent hooks"
     else:  # REQ:IMPLEMENT
-        p1_syntax = f"WHEN the user invokes the requested capability for '{display_text}', the system SHALL execute the target functionality completely without stubbing."
-        p1_pass = "All functional specifications implemented with exit code 0"
-        p1_hold = "Omission of core capabilities or presence of unimplemented/pass stubs"
+        p1_syntax = f"WHEN the user invokes the requested capability for '{display_text}', the system SHALL execute the target functionality completely without stubbing, verified with accompanying automated tests."
+        p1_pass = "All functional specifications implemented and verified by accompanying unit tests (exit code 0)"
+        p1_hold = "Omission of core capabilities, missing tests, or presence of unimplemented/pass stubs"
 
     contracts = []
     contracts.append({
@@ -149,6 +161,10 @@ def decompose_directive(directive_id: str, directive_text: str, task_id: str = "
         "standards": ["ISO/IEC/IEEE 29148", "RFC 2119", "EARS"],
         "contracts": contracts
     }
+
+
+# Backwards compatibility alias
+extract_acceptance_contract = decompose_directive
 
 
 def format_contract_markdown(contract_data: Dict[str, Any]) -> str:
