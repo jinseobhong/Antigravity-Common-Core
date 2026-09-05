@@ -1,0 +1,20 @@
+# config.yaml - Code Review Gatekeeper Configuration
+
+version: "1.0"
+policy:
+  name: "Strict Clean & Fidelity Gatekeeper"
+  min_pass_score: 90
+  hard_gate_on_stub: true
+  hard_gate_on_secret: true
+  hard_gate_on_type_evasion: true
+
+weights:
+  fidelity_and_completeness: 35
+  cleanliness_and_flow: 25
+  modularity_and_state: 25
+  hygiene_and_safety: 15
+
+thresholds:
+  max_indentation_level: 2
+  max_function_lines: 40
+  allow_any_type: false

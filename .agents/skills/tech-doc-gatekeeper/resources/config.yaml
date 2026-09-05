@@ -1,0 +1,20 @@
+# config.yaml - Technical Documentation Gatekeeper Configuration
+
+version: "1.0"
+policy:
+  name: "Strict Technical Documentation Quality Standard"
+  min_pass_score: 90
+  hard_gate_on_placeholder: true
+  hard_gate_on_secret: true
+  hard_gate_on_broken_code_block: true
+
+weights:
+  completeness_and_prerequisites: 35
+  accuracy_and_reproducibility: 25
+  structure_and_hierarchy: 25
+  hygiene_and_formatting: 15
+
+thresholds:
+  max_consecutive_prose_lines: 80
+  require_code_block_language_tag: true
+  disallow_weasel_words: true

@@ -1,0 +1,12 @@
+{
+  "adversarial-stop-gate": {
+    "enabled": true,
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python -c \"import os, sys, subprocess; script = next((p for p in ['./hooks/enforce_adversarial_gate.py', '.agents/hooks/enforce_adversarial_gate.py', 'sandbox/.agents/hooks/enforce_adversarial_gate.py'] if os.path.exists(p)), './hooks/enforce_adversarial_gate.py'); sys.exit(subprocess.run([sys.executable, script] + sys.argv[1:]).returncode)\"",
+        "timeout": 15
+      }
+    ]
+  }
+}
